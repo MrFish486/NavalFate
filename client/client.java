@@ -6,7 +6,6 @@ public class client {
 		try {
 			DatagramSocket socket = new DatagramSocket(9010);
 			byte[] data = new byte[64];
-			byte[] reply = "R".getBytes();
 			System.out.printf("udp:%s:%d%n", InetAddress.getLocalHost().getHostAddress(), 9010);
 			DatagramPacket rcv = new DatagramPacket(data, data.length);
 			while (true) {
