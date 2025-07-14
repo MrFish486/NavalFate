@@ -83,6 +83,33 @@ class game {
 		}
 		return false;
 	}
+	public void tick () {
+		for (int i = 0; i < this.mines.size(); i ++) {
+			mines.get(i).drift();
+		}
+		for (int i = 0; i < this.ships.size(); i ++) {
+			for (int ii = 0; ii < this.mines.size(); ii ++) {
+				if (this.mines.get(ii).x == this.ships.get(i).x && this.mines.get(ii).y == this.ships.get(i).y) {
+					ships.remove(i);
+					mines.remove(ii);
+				}
+			}
+			for (int ii = 0; ii < this.ships.size(); ii ++) {
+				if (this.ships.get(ii).x == this.ships.get(i).x && this.ships.get(ii).y == this.ships.get(i).y && i != ii) {
+					ships.remove(i);
+					ships.remove(ii);
+				}
+			}
+		}
+	}
+	public void moveship (int x, int y, int tx, int ty) {
+		for (int i = 0; i < this.ships.size(); i ++) {
+			if (this.ships.get(i).x == x && this.ships.get(i).y == y) {
+				this.ships.get(i).x = tx;
+				this.ships.get(i).y = ty;
+			}
+		}
+	}
 }
 class ship {
 	int x;
