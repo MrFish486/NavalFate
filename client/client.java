@@ -1,18 +1,23 @@
 import java.net.*;
 import java.io.IOException;
+import java.util.regex.*;
 
 public class client {
 	public static void main (String args[]) {
 		try {
-			DatagramSocket socket = new DatagramSocket(9010);
-			byte[] data = new byte[64];
-			System.out.printf("udp:%s:%d%n", InetAddress.getLocalHost().getHostAddress(), 9010);
-			DatagramPacket rcv = new DatagramPacket(data, data.length);
-			while (true) {
-				socket.receive(rcv);
-				String stringdata = new String(rcv.getData(), 0, rcv.getLength());
-				System.out.print(String.format("From %s : %s", rcv.getAddress().toString(), stringdata));
-			}
+			String        out, in;
+			int           port;
+			byte[]        rcv = new byte[2048];
+			IntetAdddress address;
+			// Parse arguments and set outgoing
+			DatagramSocket socket = new DatagramSocket();
+			DatagramPacket packet = new DatagramPacket(out.getBytes(), out.getBytes().length, address, port);
+			socket.send(packet);
+			DatagramPacket rcvpacket = new DatagramPacket(rcv, rcv.length);
+			socket.receive(rcv);
+			in = new String(rcvpacket.getData(), 0, rcvpacket.getLength());
+			// Act based on what the server returned
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

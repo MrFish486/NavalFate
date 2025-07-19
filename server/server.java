@@ -6,41 +6,66 @@ import java.util.regex.*;
 
 public class server {
 	public static void main (String[] args) throws SocketException, IOException {
+		int port;
+		String ownip;
+		try {
+			port = Integer.parseInt(args[0]);
+		} catch (Exception e) {
+			System.out.println("Usage : java server <local port>");
+			return;
+		}
+		System.out.println("Loading...");
 		Pattern a = Pattern.compile("placemine-[0-9]{1,}-[0-9]{1,}-(moored|drifting)");
-		Pattern b = Pattern.compile("placeship-[0-9]{1,}-[0-9]{1,}-[a-zA-Z0-9]");
+		Pattern b = Pattern.compile("placeship-[0-9]{1,}-[0-9]{1,}-[a-zA-Z0-9]{1,}");
 		Pattern c = Pattern.compile("removemine-[0-9]{1,}-[0-9]{1,}");
+		Pattern d = Pattern.compile("info-[0-9]{1,}-[0-9]{1,}");
+		Pattern ee = Pattern.compile("moveship-[a-zA-Z0-9]{1,}-[0-9]{1,}-[0-9]{1,}");
+		Pattern f = Pattern.compile("shoot-[a-zA-Z0-9]{1,}-[0-9]{1,}-[0-9]{1,}");
 		game main = new game(20, 20);
 
 		String version = "0.1";
 		String motd    = "Hello from the server!";
 
 		byte[] rcvdata = new byte[256];
-		System.out.println("Server is listening");
+		System.out.println("\033[FFetching own ip...");
+		ownip = InetAddress.getLocalHost().getHostAddress().toString();
+		System.out.println(String.format("\033[FServer is listening. Use `nc -u %s %s` to connect with netcat. Consider configuring port forwarding.", ownip, args[0]));
 		DatagramPacket rcv    = new DatagramPacket(rcvdata, rcvdata.length);
 		String request, reply;
-		DatagramSocket socket = new DatagramSocket(Integer.parseInt(args[0]));
+		DatagramSocket socket = new DatagramSocket(port);
 		while (true) {
 			socket.receive(rcv);
 			request = new String(rcv.getData(), 0, rcv.getLength());
 			try {
-				request = request.split("\n")[0]; // for netcat test purposes
+				request = request.replaceAll("^[\n\r]", "").replaceAll("[\n\r]$", "");
+				//request = request.split("\n")[0]; // for netcat test purposes
 			} catch (Exception e) {}
-			System.out.println(String.format("From %s:%d : '%s'", rcv.getAddress().toString(), rcv.getPort(), request));
-			if (request.equals("version?")) {
+			System.out.println(String.format("From ip(%s), port(%d) : '%s'", rcv.getAddress().toString(), rcv.getPort(), request));
+			if (request.equals("help")) {
+				reply = "Refer to https://www.github.com/MrFish486/NavalFate for help";
+			} else if (request.equals("version?")) {
 				reply = version;
 			} else if (request.equals("status?")) {
 				reply = main.toString();
+			} else if (request.equals("ip?")) {
+				reply = ownip;
 			} else if (a.matcher(request).matches()) {
 				reply = "!2";
 				try {
+					boolean act = true;
 					for (int i = 0; i < main.ships.size(); i ++) {
-						if
+						if (main.ships.get(i).name.equals(request.split("-")[3])) {
+							reply = "0";
+							act = false;
+						}
 					}
-					boolean p = main.placemine(Integer.parseInt(request.split("-")[2]), Integer.parseInt(request.split("-")[1]), request.split("-")[3]);
-					if (p) {
-						reply = "1";
-					} else {
-						reply = "0";
+					if (act) {
+						boolean p = main.placemine(Integer.parseInt(request.split("-")[2]), Integer.parseInt(request.split("-")[1]), request.split("-")[3]);
+						if (p) {
+							reply = "1";
+						} else {
+							reply = "0";
+						}
 					}
 				} catch (Exception e) {
 					reply = "!1";
@@ -68,8 +93,81 @@ public class server {
 			} else if (c.matcher(request).matches()) {
 				reply = "!2";
 				try {
+					reply = "0";
 					for (int i = 0; i < main.mines.size(); i ++) {
-						if (main.mines.get(i).x == Integer.parseInt(request.split("-")
+						if (main.mines.get(i).x == Integer.parseInt(request.split("-")[2]) && main.mines.get(i).y == Integer.parseInt(request.split("-")[1])) {
+							main.mines.remove(i);
+							reply = "1";
+							break;
+						}
+					}
+				} catch (Exception e) {
+					reply = "!1";
+				}
+			} else if (d.matcher(request).matches()) {
+				reply = "!2";
+				try {
+					reply = String.format("water at x %s, y %s", request.split("-")[1], request.split("-")[2]);
+					boolean acted = false;
+					for (int i = 0; i < main.mines.size(); i ++) {
+						if (main.mines.get(i).x == Integer.parseInt(request.split("-")[2]) && main.mines.get(i).y == Integer.parseInt(request.split("-")[1]) && !acted) {
+							reply = main.mines.get(i).toString();
+							acted = true;
+							break;
+							
+						}
+					}
+					for (int i = 0; i < main.ships.size(); i ++) {
+						if (main.ships.get(i).x == Integer.parseInt(request.split("-")[2]) && main.ships.get(i).y == Integer.parseInt(request.split("-")[1]) && !acted) {
+							reply = main.ships.get(i).toString();
+							acted = true;
+							break;
+						}
+					}
+				} catch (Exception e) {
+					reply = "!1";
+				}
+			} else if (ee.matcher(request).matches()) {
+				reply = "!2";
+				try {
+					reply = "0";
+					for (int i = 0; i < main.ships.size(); i ++) {
+						if (main.ships.get(i).name.equals(request.split("-")[1])) {
+							int xx = Integer.parseInt(request.split("-")[3]); // Must have atomic operations
+							int yy = Integer.parseInt(request.split("-")[2]);
+							main.ships.get(i).setpos(xx, yy);
+							reply = "1";
+						}
+					}
+				} catch (Exception e) {
+					reply = "!1";
+				}
+			} else if (f.matcher(request).matches()) {
+				reply = "!2";
+				try {
+					reply = "0";
+					boolean acted = false;
+					for (int i = 0; i < main.ships.size(); i ++) {
+						if (main.ships.get(i).name.equals(request.split("-")[1])) {
+							int xx = Integer.parseInt(request.split("-")[3]);
+							int yy = Integer.parseInt(request.split("-")[2]);
+							for (int ii = 0; ii < main.ships.size(); ii ++) {
+								if (main.ships.get(ii).x == xx && main.ships.get(ii).y == yy && !acted) {
+									main.ships.remove(ii);
+									acted = true;
+									reply = "1";
+									break;
+								}
+							}
+							for (int ii = 0; ii < main.mines.size(); ii ++) {
+								if (main.mines.get(ii).x == xx && main.mines.get(ii).y == yy && !acted) {
+									main.mines.remove(ii);
+									acted = true;
+									reply = "1";
+									break;
+								}
+							}
+						}
 					}
 				} catch (Exception e) {
 					reply = "!1";
@@ -194,18 +292,19 @@ class game {
 				}
 				for (int i = 0; i < this.ships.size(); i ++) {
 					if (this.ships.get(i).x == x && this.ships.get(i).y == y && !charfound) {
-						ret += 's';
+						ret += 'S';
 						charfound = true;
 					}
 				}
 				if (!charfound) {
 					ret += '~';
 				}
+				ret += ' ';
 			}
-			ret += '\n';
+			ret += "\n\n";
 		}
 		ret += String.format("%d mine(s), %d ship(s)\n", this.mines.size(), this.ships.size());
-		ret += "[m]oored mine, [d]rifting mine, [s]hip\n";
+		ret += "M : moored (anchored) mine\nD : drifting mine\nS : ship\n~ : water\n";
 		return ret;
 	}
 }
@@ -216,9 +315,14 @@ class ship {
 	public ship (int x, int y, String name) {
 		this.x = x;
 		this.y = y;
+		this.name = name;
 	}
 	public String toString () {
-		return String.format("Ship \"%s\" at x %d, y %d", this.x, this.y);
+		return String.format("ship \"%s\" at x %d, y %d", this.name, this.y, this.x);
+	}
+	public void setpos (int x, int y) {
+		this.x = x;
+		this.y = y;
 	}
 }
 class mine {
@@ -231,7 +335,7 @@ class mine {
 		this.type = type;
 	}
 	public String toString () {
-		return String.format("%s mine at x %d, y %d", this.type, this.x, this.y);
+		return String.format("%s mine at x %d, y %d", this.type, this.y, this.x);
 	}
 	public void drift (int h, int w) {
 		if (this.type.equals("drifting")) {
@@ -257,9 +361,9 @@ class mine {
 	}
 	public char rep () {
 		if (this.type.equals("moored")) {
-			return 'm';
+			return 'M';
 		} else if (this.type.equals("drifting")) {
-			return 'd';
+			return 'D';
 		} else {
 			return '?';
 		}
