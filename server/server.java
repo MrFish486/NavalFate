@@ -1,3 +1,4 @@
+// Inspired by the docopt example https://www.pypi.org/project/docopt/
 import java.net.*;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -6,9 +7,13 @@ import java.util.regex.*;
 public class server {
 	public static void main (String[] args) throws SocketException, IOException {
 		Pattern a = Pattern.compile("placemine-[0-9]{1,}-[0-9]{1,}-(moored|drifting)");
-		Pattern b = Pattern.compile("placeship-[0-9]{1,}-[0-9]{1,}");
+		Pattern b = Pattern.compile("placeship-[0-9]{1,}-[0-9]{1,}-[a-zA-Z0-9]");
+		Pattern c = Pattern.compile("removemine-[0-9]{1,}-[0-9]{1,}");
 		game main = new game(20, 20);
-		String version = "1.0";
+
+		String version = "0.1";
+		String motd    = "Hello from the server!";
+
 		byte[] rcvdata = new byte[256];
 		System.out.println("Server is listening");
 		DatagramPacket rcv    = new DatagramPacket(rcvdata, rcvdata.length);
@@ -26,8 +31,12 @@ public class server {
 			} else if (request.equals("status?")) {
 				reply = main.toString();
 			} else if (a.matcher(request).matches()) {
+				reply = "!2";
 				try {
-					boolean p = main.placemine(Integer.parseInt(request.split("-")[1]), Integer.parseInt(request.split("-")[2]), request.split("-")[3]);
+					for (int i = 0; i < main.ships.size(); i ++) {
+						if
+					}
+					boolean p = main.placemine(Integer.parseInt(request.split("-")[2]), Integer.parseInt(request.split("-")[1]), request.split("-")[3]);
 					if (p) {
 						reply = "1";
 					} else {
@@ -37,12 +46,30 @@ public class server {
 					reply = "!1";
 				}
 			} else if (b.matcher(request).matches()) {
+				reply = "!1";
 				try {
-					boolean p = main.placeship(Integer.parseInt(request.split("-")[1]), Integer.parseInt(request.split("-")[2]));
+					boolean p = main.placeship(Integer.parseInt(request.split("-")[2]), Integer.parseInt(request.split("-")[1]), request.split("-")[3]);
+
 					if (p) {
 						reply = "1";
 					} else {
 						reply = "0";
+					}
+				} catch (Exception e) {
+					reply = "!1";
+				}
+			} else if (request.equals("tick")) {
+				try {
+					main.tick();
+					reply = "1";
+				} catch (Exception e) {
+					reply = "0";
+				}
+			} else if (c.matcher(request).matches()) {
+				reply = "!2";
+				try {
+					for (int i = 0; i < main.mines.size(); i ++) {
+						if (main.mines.get(i).x == Integer.parseInt(request.split("-")
 					}
 				} catch (Exception e) {
 					reply = "!1";
@@ -119,16 +146,16 @@ class game {
 		}
 		return false;
 	}
-	public boolean placeship (int x, int y) {
+	public boolean placeship (int x, int y, String name) {
 		if (!this.isOccupied(x, y)) {
-			this.ships.add(new ship(x, y));
+			this.ships.add(new ship(x, y, name));
 			return true;
 		}
 		return false;
 	}
 	public void tick () {
 		for (int i = 0; i < this.mines.size(); i ++) {
-			mines.get(i).drift();
+			mines.get(i).drift(this.height, this.width);
 		}
 		for (int i = 0; i < this.ships.size(); i ++) {
 			for (int ii = 0; ii < this.mines.size(); ii ++) {
@@ -177,20 +204,21 @@ class game {
 			}
 			ret += '\n';
 		}
-		ret += '\n';
-		ret += String.format("%d mine(s), %d ship(s)", this.mines.size(), this.ships.size());
+		ret += String.format("%d mine(s), %d ship(s)\n", this.mines.size(), this.ships.size());
+		ret += "[m]oored mine, [d]rifting mine, [s]hip\n";
 		return ret;
 	}
 }
 class ship {
 	int x;
 	int y;
-	public ship (int x, int y) {
+	String name;
+	public ship (int x, int y, String name) {
 		this.x = x;
 		this.y = y;
 	}
 	public String toString () {
-		return String.format("ship at x %d, y %d", this.x, this.y);
+		return String.format("Ship \"%s\" at x %d, y %d", this.x, this.y);
 	}
 }
 class mine {
@@ -205,17 +233,25 @@ class mine {
 	public String toString () {
 		return String.format("%s mine at x %d, y %d", this.type, this.x, this.y);
 	}
-	public void drift () {
+	public void drift (int h, int w) {
 		if (this.type.equals("drifting")) {
 			double choice = Math.random();
 			if (choice > 0 && choice < 0.25) {
-				this.x ++;
+				if (this.x != w) {
+					this.x ++;
+				}
 			} else if (choice > 0.25 && choice < 0.5) {
-				this.x --;
+				if (this.x != 0) {
+					this.x --;
+				}
 			} else if (choice > 0.5 && choice < 0.75) {
-				this.y ++;
+				if (this.y != h) {
+					this.y ++;
+				}
 			} else if (choice > 0.75 && choice < 1) {
-				this.y --;
+				if (this.y != 0) {
+					this.y --;
+				}
 			}
 		}
 	}
