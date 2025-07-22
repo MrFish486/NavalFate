@@ -22,13 +22,13 @@ public class server {
 		Pattern ee = Pattern.compile("moveship-[a-zA-Z0-9]{1,}-[0-9]{1,}-[0-9]{1,}");
 		Pattern f = Pattern.compile("shoot-[a-zA-Z0-9]{1,}-[0-9]{1,}-[0-9]{1,}");
 		game main = new game(20, 20);
-
-		String version = "0.1";
-		String motd    = "Hello from the server!";
-
 		byte[] rcvdata = new byte[256];
 		System.out.println("\033[FFetching own ip...");
 		ownip = InetAddress.getLocalHost().getHostAddress().toString();
+
+		String version = "0.1";
+		String motd    = String.format("Check out the code : https://www.github.com/MrFish486/NavalFate\nServer running on %s:%d", ownip, port);
+
 		System.out.println(String.format("\033[FServer is listening. Use `nc -u %s %s` to connect with netcat. Consider configuring port forwarding.", ownip, args[0]));
 		DatagramPacket rcv    = new DatagramPacket(rcvdata, rcvdata.length);
 		String request, reply;
@@ -46,7 +46,7 @@ public class server {
 			} else if (request.equals("version?")) {
 				reply = version;
 			} else if (request.equals("status?")) {
-				reply = main.toString();
+				reply = main.toString() + '\n' + motd;
 			} else if (request.equals("ip?")) {
 				reply = ownip;
 			} else if (a.matcher(request).matches()) {
